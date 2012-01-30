@@ -1,0 +1,269 @@
+#!/usr/bin/env python
+# encoding: UTF-8
+
+from sys import argv
+from math import sqrt
+from re import match
+from random import sample, choice
+from psychopy.monitors import Monitor
+from psychopy.gui import Dlg
+from wx import Size
+from psychopy.core import wait
+from psychopy.event import Mouse, getKeys, clearEvents
+from psychopy.visual import \
+    Window, RatingScale, TextStim, SimpleImageStim, Circle
+
+output_path_prefix = argv[1]
+cake_image_path = argv[2]
+splotches = [1, 2]
+splotch_path_fmt = argv[3]
+likert_scale_max = 9
+button_radius = .1
+
+# ------------------------------------------------------------
+# Generic subroutines
+# ------------------------------------------------------------
+
+def shuffled(l): return sample(l, len(l))
+
+# ------------------------------------------------------------
+# Get the subject number
+# ------------------------------------------------------------
+
+dialog = Dlg(title = 'Decision-Making')
+dialog.addText('')
+dialog.addField('Subject Number:', 0)
+dialog.addText('')
+dialog.show()
+
+if not dialog.OK: exit()
+
+data = dict(subject = dialog.data[0])
+
+# ------------------------------------------------------------
+# Set up stimuli
+# ------------------------------------------------------------
+
+screen_width, screen_height = Monitor('testMonitor').getSizePix()
+approx_dialog_box_width = 200
+win = Window((1000, 750),
+    monitor = 'testMonitor',
+    winType = 'pyglet', fullscr = False,
+    units = 'norm', color = 'white')
+mouse = Mouse(win = win)
+
+class showing:
+   '"with showing(foo, bar): …" ensures that foo and bar are implicitly drawn on each call to draw().'
+    implicitly_draw = []
+    def __init__(self, *stimuli):
+        self.stimuli = stimuli
+    def __enter__(self):
+        for s in self.stimuli: showing.implicitly_draw.append(s)
+    def __exit__(self, _1, _2, _3):
+        for s in self.stimuli: showing.implicitly_draw.remove(s)
+def draw(*stimuli):
+   for s in stimuli: s.draw()
+   for s in showing.implicitly_draw: s.draw()
+   win.flip()
+
+def text(x, y, string, hAlign = 'center', vAlign = 'center'):
+    return TextStim(win,
+        text = string, pos = (x, y), color = 'black',
+        height = .075, alignHoriz = hAlign, alignVert = vAlign)
+
+def rating_scale(**a): return RatingScale(win,
+    textColor = 'black', lineColor = 'black',
+    markerStyle = 'circle', markerColor = 'darkgreen',
+    stretchHoriz = 1.75,
+    showValue = False, allowSkip = False, showScale = False,
+    escapeKeys = ['escape'], singleClick = True, showAccept = False,
+    **a)
+
+def likert_scale(lo, hi, x = 0, y = -.7): return rating_scale(
+    low = 1, lowAnchorText = lo,
+    high = likert_scale_max, highAnchorText = hi,
+    pos = (x, y))
+
+def probability_scale(x, y):
+    rs = rating_scale(
+        low = 0, high = 1, pos = [x, y],
+        lowAnchorText = 'impossible', highAnchorText = 'certain')
+    rs.precision = 1000
+      # The constructor doesn't allow precisions above 100.
+    return rs
+
+class Button:
+    def __init__(self, x, y, string):
+        self.x, self.y, self.string, = x, y, string
+        self.circle = Circle(win,
+            button_radius, pos = (x, y),
+            lineColor = 'black', lineWidth = 3, edges = 64,
+            fillColor = 'lightgray')
+        self.text = text(x, y, string)
+        self.was_pressed = False
+
+    def draw(self):
+        self.circle.draw()
+        self.text.draw()
+
+    def inside(self, (x, y)): return (
+        sqrt((self.x - x)*(self.x - x) + (self.y - y)*(self.y - y))
+        <= button_radius)
+
+    def activated(self):
+        if self.was_pressed or (
+                any(mouse.getPressed()) and
+                self.inside(mouse.getPos())):
+            self.was_pressed = True
+            return True
+        return False
+
+def scale_screen(*stimuli):
+    """Display some stimuli (including at least one scale) until
+    the subject has responded to all the scales. Returns the
+    responses."""
+    scales = filter(lambda x: isinstance(x, RatingScale), stimuli)
+    clearEvents()
+    while any([x.noResponse for x in scales]): draw(*stimuli)
+    wait(.25)
+      # To make the transition less jarring.
+    rs = [x.getRating() for x in scales]
+    return rs[0] if len(rs) == 1 else rs
+
+def button_screen(*stimuli):
+    """Display some stimuli (including at least one button) until
+    the subject presses a button. Returns the button value."""
+    buttons = filter(lambda x: isinstance(x, Button), stimuli)
+    while all([not x.activated() for x in buttons]):
+        if getKeys(['escape']): exit()
+        clearEvents()
+        draw(*stimuli)
+    wait(.25)
+    return filter(lambda x: x.activated(), buttons)[0].string
+
+def wait_screen(time_to_wait, *stimuli):
+   'Display some stimuli for a given amount of time.'
+   draw(*stimuli)
+   wait(time_to_wait)
+
+# ------------------------------------------------------------
+# Explain the gamble outcomes
+# ------------------------------------------------------------
+
+def instructions(string): button_screen(
+    text(0, .8, string, vAlign = 'top'),
+    Button(0, -.5, 'Next'))
+
+def rating(string, lo, hi): return scale_screen(
+    text(0, .3, string),
+    likert_scale(lo, hi, y = -.3))
+
+def get_amount(string):
+    draw(
+        text(0, .8, string, vAlign = 'top'))
+    trying_again = False
+    while True:
+        dialog = Dlg(
+            title = 'Entry',
+            pos = (screen_width/2 - approx_dialog_box_width, .85 * screen_height))
+        dialog.addText(' ' * 45)
+        dialog.addField('Amount:')
+        dialog.addText(
+             'Invalid dollar amount; please try again.'
+             if trying_again else ' ' * 45)
+        dialog.show()
+        amount = dialog.data[0]
+        mo = match(r'\s*\$?\s*(\d+(?:\.\d\d?)?)\s*$', amount)
+        if mo:
+            amount = mo.groups(1)[0]
+            break
+        else:
+            trying_again = True
+    wait(.25)
+    return amount
+
+instructions('In this task, you will be asked to evaluate several gambles. These gambles will be hypothetical, but try your best to imagine what you would choose if you were really offered them.\n\nEach gamble has three possible outcomes: good, neutral, and bad.')
+
+instructions('If you get the neutral outcome, nothing happens.')
+
+instructions('If you get the good outcome, you win a generous piece of chocolate cake!')
+
+data['displayed_cake_picture'] = False
+if choice((False, True)):
+    data['displayed_cake_picture'] = True
+    button_screen(
+        text(0, .8, "Here's what the cake looks like:", vAlign = "top"),
+        SimpleImageStim(win, image = cake_image_path),
+        Button(0, -.8, 'Next'))
+
+data['cake_appeal'] = rating(
+    'How appealing do you find this cake outcome?',
+    'totally unappealing', 'very appealing')
+
+data['cake_wtp'] = get_amount("Now, suppose you played the following game: you would pick an amount of money (say, $5.50), and then the computer would randomly select a price less than $10. If the randomly selected price was less than or equal to the amount of money you picked, you would be obliged to buy the piece of cake for the price. But if the price was greater than the amount you picked, you wouldn't be able to buy the cake even if you wanted to.\n\nWhat amount would you choose?")
+
+instructions("If you get the bad outcome, we'll ask you to solve a set of long-division problems, which we expect will take about half an hour.")
+
+data['arithmetic_appeal'] = rating(
+    'How appealing do you find this arithmetic outcome?',
+    'totally unappealing', 'very appealing')
+
+data['arithmetic_wtp'] = get_amount('Suppose you played this game: as before, you would pick an amount of money, and then the computer would randomly select a price less than $10. This time, if the randomly selected price was less than or equal to the amount of money you picked, you would have to pay the price without getting anything in return. On the other hand, if the price was greater than the amount you picked, you would have to do the long-division problems.\n\nWhat amount would you choose?')
+
+data['overall_appeal'] = rating(
+    'How would you feel if you got neither the good outcome nor the bad outcome?',
+    'very disappointed', 'very relieved')
+
+data['would_take_both'] = button_screen(
+    text(0, .3, 'If you were offered the cake in exchange for doing the division problems, would you take it?'),
+    Button(-.25, -.3, 'Yes'),
+    Button(.25, -.3, 'No'))
+
+# ------------------------------------------------------------
+# Administer a brief measure of temporal discounting
+# ------------------------------------------------------------
+
+
+# ------------------------------------------------------------
+# Explain the stimuli, with examples
+# ------------------------------------------------------------
+
+splotch = SimpleImageStim(win, pos = (0, 125),
+    image = splotch_path_fmt % (1,))
+
+# ------------------------------------------------------------
+# Have the subject evaluate some gambles
+# ------------------------------------------------------------
+
+data['gambles'] = []
+
+with showing(splotch):
+    for splotch_num in shuffled(splotches):
+
+        splotch.setImage(splotch_path_fmt % (splotch_num,))
+        d = dict(splotch = splotch_num)
+
+        d['good_prob'], d['bad_prob'] = scale_screen(
+            text(-.95, -.4, u'How likely is…', 'left'),
+            text(-.95, -.5, u'…the good outcome?', 'left'),
+            probability_scale(.3, -.5),
+            text(-.95, -.75, u'…the bad outcome?', 'left'),
+            probability_scale(.3, -.75))
+
+        d['appeal'] = scale_screen(
+            text(0, -.5, 'How appealing do you find this gamble?'),
+            likert_scale('totally unappealing', 'very appealing'))
+
+        d['choice'] = button_screen(
+            text(0, -.5, 'If you were offered this gamble, would you take it?'),
+            Button(-.25, -.75, 'Yes'),
+            Button(.25, -.75, 'No'))
+
+        data['gambles'].append(d)
+
+# ------------------------------------------------------------
+# Done!
+# ------------------------------------------------------------
+
+wait_screen(1,
+    text(0, 0, 'Done!\n\nPlease let the experimenter know you are done.'))
