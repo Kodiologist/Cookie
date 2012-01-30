@@ -239,6 +239,9 @@ button_screen('would_take_both',
 # Administer a brief measure of temporal discounting
 # ------------------------------------------------------------
 
+get_amount('discount_1week', "Now suppose you've won a raffle with a cash prize. At your option, you may receive $20 right now or a larger amount of money one week in the future. What is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately or the larger amount a week from now?")
+
+get_amount('discount_1month', 'What if the delay was one month instead? Again, what is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately or the larger amount a month from now?')
 
 # ------------------------------------------------------------
 # Explain the stimuli, with examples
