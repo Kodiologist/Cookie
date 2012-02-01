@@ -15,7 +15,7 @@ from psychopy.visual import \
 
 output_path_prefix = argv[1]
 cake_image_path = argv[2]
-splotches = [1, 2]
+test_splotches = [22, 3, 11,   14, 28, 23,   29, 12, 1,   6, 15, 19]
 example_splotch = 20
 splotch_path_fmt = argv[3]
 likert_scale_max = 9
@@ -283,7 +283,7 @@ with showing(splotch):
 # ------------------------------------------------------------
 
 with showing(splotch):
-    for trial, splotch_num in enumerate(shuffled(splotches)):
+    for trial, splotch_num in enumerate(shuffled(test_splotches)):
 
         def tkey(string): return ('gambles', trial, string)
         splotch.setImage(splotch_path_fmt % (splotch_num,))
