@@ -26,7 +26,7 @@ likert_scale_max = 9
 button_radius = .1
 
 # ------------------------------------------------------------
-# Generic subroutines
+# Helper functions and classes
 # ------------------------------------------------------------
 
 def shuffled(l): return sample(l, len(l))
@@ -79,8 +79,19 @@ class dkey_prefix:
     def __exit__(self, _1, _2, _3): 
         dkey_prefix.p = dkey_prefix.p[len(self.x):]
 
+class timestamps:
+   def __init__(self, dkey):
+       self.dkey = dkey
+   def timestamp(self, i):
+       with dkey_prefix('times'): save(tuplecat(self.dkey, i),
+           datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"))
+   def __enter__(self):
+       self.timestamp(0)
+   def __exit__(self, _1, _2, _3):
+       self.timestamp(1)
+
 # ------------------------------------------------------------
-# Set up stimuli
+# Stimuli
 # ------------------------------------------------------------
 
 screen_width, screen_height = Monitor('testMonitor').getSizePix()
@@ -108,17 +119,6 @@ def draw(*stimuli):
    for s in stimuli: s.draw()
    for s in showing.implicitly_draw: s.draw()
    win.flip()
-
-class timestamps:
-   def __init__(self, dkey):
-       self.dkey = dkey
-   def timestamp(self, i):
-       with dkey_prefix('times'): save(tuplecat(self.dkey, i),
-           datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"))
-   def __enter__(self):
-       self.timestamp(0)
-   def __exit__(self, _1, _2, _3):
-       self.timestamp(1)
 
 def text(x, y, string, hAlign = 'center', vAlign = 'center', wrap = None):
     return TextStim(win,
