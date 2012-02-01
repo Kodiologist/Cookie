@@ -12,6 +12,7 @@ from psychopy.core import wait
 from psychopy.event import Mouse, getKeys, clearEvents
 from psychopy.visual import \
     Window, ShapeStim, Circle, TextStim, SimpleImageStim, RatingScale
+from cookie_gui import DlgSansCancel
 
 output_path_prefix = argv[1]
 cake_image_path = argv[2]
@@ -198,14 +199,14 @@ def get_amount(dkey, string):
     with timestamps(dkey):
         trying_again = False
         while True:
-            dialog = Dlg(
+            dialog = DlgSansCancel(
                 title = 'Entry',
                 pos = (screen_width/2 - approx_dialog_box_width, .85 * screen_height))
             dialog.addText(' ' * 45)
             dialog.addField('Amount:')
             dialog.addText(
                  'Invalid dollar amount; please try again.'
-                 if trying_again else ' ' * 45)
+                 if trying_again else '')
             dialog.show()
             amount = dialog.data[0]
             mo = match(r'\s*\$?\s*(\d+(?:\.\d\d?)?)\s*$', amount)
