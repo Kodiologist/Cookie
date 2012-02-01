@@ -12,6 +12,7 @@ from psychopy.core import wait
 from psychopy.event import Mouse, getKeys, clearEvents
 from psychopy.visual import \
     Window, ShapeStim, Circle, TextStim, SimpleImageStim, RatingScale
+import json
 from cookie_gui import DlgSansCancel
 
 output_path_prefix = argv[1]
@@ -30,11 +31,57 @@ button_radius = .1
 
 def shuffled(l): return sample(l, len(l))
 
+def staggered(l):
+    # staggered([1, 2, 3]) → [(1, 2), (2, 3), (3, None)]
+    return zip(l, list(l[1:]) + [None])
+
+def tuplecat(a, b): return (
+  b if a is () else
+  a if b is () else
+ (a if isinstance(a, tuple) else (a,)) +
+ (b if isinstance(b, tuple) else (b,)))
+
+data = dict()
+def save(key, value):
+    """Set a value in data with Perl-style autovivification, so
+    save(('times', 3, 'orange'), 'x') is like
+    data['times'][3]['orange'] = 'x' but works even if the
+    intermediate data structures don't exist yet."""
+    key = tuplecat(tuple(dkey_prefix.p), key)
+    if isinstance(key, tuple):
+        seq = data
+        for k, next_k in staggered(key):
+            newobj = (
+                 value if next_k is None else
+                 [] if isinstance(next_k, int) else
+                 {}) # if isinstance(next_k, str)
+            if isinstance(seq, dict):
+                if k not in seq:
+                    seq[k] = newobj
+            elif isinstance(seq, list):
+                if len(seq) - 1 < k:
+                    # The list is too short. Pad it out with Nones.
+                    seq[len(seq):] = (k + 1 - len(seq)) * [None]
+                if seq[k] is None:
+                    seq[k] = newobj
+            else: raise KeyError
+            seq = seq[k]
+    elif isinstance(key, str):
+        data[key] = value
+    else: raise KeyError
+
+class dkey_prefix:
+    p = ()
+    def __init__(self, x):
+        self.x = x if isinstance(x, tuple) else (x,)
+    def __enter__(self):
+        dkey_prefix.p = tuplecat(self.x, dkey_prefix.p)
+    def __exit__(self, _1, _2, _3): 
+        dkey_prefix.p = dkey_prefix.p[len(self.x):]
+
 # ------------------------------------------------------------
 # Set up stimuli
 # ------------------------------------------------------------
-
-data = dict(times = {})
 
 screen_width, screen_height = Monitor('testMonitor').getSizePix()
 approx_dialog_box_width = 200
@@ -43,6 +90,9 @@ win = Window((1000, 750),
     winType = 'pyglet', fullscr = False,
     units = 'norm', color = 'white')
 mouse = Mouse(win = win)
+
+splotch = SimpleImageStim(win, pos = (0, 125),
+    image = splotch_path_fmt % (example_splotch,))
 
 class showing:
     '"with showing(foo, bar): …" ensures that foo and bar are implicitly drawn on each call to draw().'
@@ -59,14 +109,15 @@ def draw(*stimuli):
    win.flip()
 
 class timestamps:
-   def __init__(self, dkey): self.dkey = dkey
-   def timestamp(self):
-       if self.dkey not in data['times']:
-           data['times'][self.dkey] = []
-       data['times'][self.dkey].append(
+   def __init__(self, dkey):
+       self.dkey = dkey
+   def timestamp(self, i):
+       with dkey_prefix('times'): save(tuplecat(self.dkey, i),
            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"))
-   def __enter__(self): self.timestamp()
-   def __exit__(self, _1, _2, _3): self.timestamp()
+   def __enter__(self):
+       self.timestamp(0)
+   def __exit__(self, _1, _2, _3):
+       self.timestamp(1)
 
 def text(x, y, string, hAlign = 'center', vAlign = 'center', wrap = None):
     return TextStim(win,
@@ -147,7 +198,7 @@ def scale_screen(dkey, *stimuli):
     wait(.25)
       # To make the transition less jarring.
     rs = [x.getRating() for x in scales]
-    data[dkey] = rs[0] if len(rs) == 1 else rs
+    save(dkey, rs[0] if len(rs) == 1 else rs)
 
 def button_screen(dkey, *stimuli):
     """Display some stimuli (including at least one button) until
@@ -161,7 +212,7 @@ def button_screen(dkey, *stimuli):
     if len(buttons) > 1:
       # No sense in saving the value of the button if there's only
       # one.
-        data[dkey] = filter(lambda x: x.activated(), buttons)[0].string
+        save(dkey, filter(lambda x: x.activated(), buttons)[0].string)
     wait(.25)
 
 def get_amount(dkey, string):
@@ -183,7 +234,7 @@ def get_amount(dkey, string):
             amount = dialog.data[0]
             mo = match(r'\s*\$?\s*(\d+(?:\.\d\d?)?)\s*$', amount)
             if mo:
-                data[dkey] = mo.groups(1)[0]
+                save(dkey, mo.groups(1)[0])
                 break
             else:
                 trying_again = True
@@ -206,7 +257,8 @@ dialog.show()
 
 if not dialog.OK: exit()
 
-data['subject'] = dialog.data[0]
+subject = int(dialog.data[0])
+save('subject', subject)
 
 # ------------------------------------------------------------
 # Explain the gamble outcomes
@@ -220,66 +272,72 @@ def rating(dkey, string, lo, hi): return scale_screen(dkey,
     text(0, .3, string),
     likert_scale(lo, hi, y = -.3))
 
-instructions('first_page', 'In this task, you will be asked to evaluate several gambles. These gambles will be hypothetical, but try your best to imagine what you would choose if you were really offered them.\n\nEach gamble has three possible outcomes: good, neutral, and bad.')
+with dkey_prefix('outcomes'):
 
-instructions('neutral_description', 'If you get the neutral outcome, nothing happens.')
+    instructions('first_page', 'In this task, you will be asked to evaluate several gambles. These gambles will be hypothetical, but try your best to imagine what you would choose if you were really offered them.\n\nEach gamble has three possible outcomes: good, neutral, and bad.')
 
-instructions('good_description', 'If you get the good outcome, you win a generous piece of chocolate cake!')
+    instructions('neutral_description', 'If you get the neutral outcome, nothing happens.')
 
-data['displayed_cake_picture'] = False
-if choice((False, True)):
-    data['displayed_cake_picture'] = True
-    button_screen('cake_picture',
-        text(0, .8, "Here's what the cake looks like:", vAlign = "top"),
-        SimpleImageStim(win, image = cake_image_path),
-        Button(0, -.8, 'Next'))
+    instructions(('cake', 'description'), 'If you get the good outcome, you win a generous piece of chocolate cake!')
 
-rating('cake_appeal',
-    'How appealing do you find this cake outcome?',
-    'totally unappealing', 'very appealing')
+    if choice((False, True)):
+        save(('cake', 'showed_picture'), True)
+        button_screen('cake_picture',
+            text(0, .8, "Here's what the cake looks like:", vAlign = "top"),
+            SimpleImageStim(win, image = cake_image_path),
+            Button(0, -.8, 'Next'))
+    else:
+        save(('cake', 'showed_picture'), False)
 
-get_amount('cake_wtp', "Now, suppose you played the following game: you would pick an amount of money (say, $5.50), and then the computer would randomly select a price less than $10. If the randomly selected price was less than or equal to the amount of money you picked, you would be obliged to buy the piece of cake for the price. But if the price was greater than the amount you picked, you wouldn't be able to buy the cake even if you wanted to.\n\nWhat amount would you choose?")
+    rating(('cake', 'appeal'),
+        'How appealing do you find this cake outcome?',
+        'totally unappealing', 'very appealing')
 
-instructions('bad_description', "If you get the bad outcome, we'll ask you to solve a set of long-division problems, which we expect will take about half an hour.")
+    get_amount(('cake', 'wtp'), "Now, suppose you played the following game: you would pick an amount of money (say, $5.50), and then the computer would randomly select a price less than $10. If the randomly selected price was less than or equal to the amount of money you picked, you would be obliged to buy the piece of cake for the price. But if the price was greater than the amount you picked, you wouldn't be able to buy the cake even if you wanted to.\n\nWhat amount would you choose?")
 
-rating('arithmetic_appeal',
-    'How appealing do you find this arithmetic outcome?',
-    'totally unappealing', 'very appealing')
+    instructions(('arithmetic', 'description'), "If you get the bad outcome, we'll ask you to solve a set of long-division problems, which we expect will take about half an hour.")
 
-get_amount('arithmetic_wtp', 'Suppose you played this game: as before, you would pick an amount of money, and then the computer would randomly select a price less than $10. This time, if the randomly selected price was less than or equal to the amount of money you picked, you would have to pay the price without getting anything in return. On the other hand, if the price was greater than the amount you picked, you would have to do the long-division problems.\n\nWhat amount would you choose?')
+    rating(('arithmetic', 'appeal'),
+        'How appealing do you find this arithmetic outcome?',
+        'totally unappealing', 'very appealing')
 
-rating('overall_appeal',
-    'How would you feel if you got neither the good outcome nor the bad outcome?',
-    'very disappointed', 'very relieved')
+    get_amount(('arithmetic', 'wtp'), 'Suppose you played this game: as before, you would pick an amount of money, and then the computer would randomly select a price less than $10. This time, if the randomly selected price was less than or equal to the amount of money you picked, you would have to pay the price without getting anything in return. On the other hand, if the price was greater than the amount you picked, you would have to do the long-division problems.\n\nWhat amount would you choose?')
 
-button_screen('would_take_both',
-    text(0, .3, 'If you were offered the cake in exchange for doing the division problems, would you take it?'),
-    Button(-.25, -.3, 'Yes'),
-    Button(.25, -.3, 'No'))
+    rating('overall_appeal',
+        'How would you feel if you got neither the good outcome nor the bad outcome?',
+        'very disappointed', 'very relieved')
+
+    button_screen('would_take_both',
+        text(0, .3, 'If you were offered the cake in exchange for doing the division problems, would you take it?'),
+        Button(-.25, -.3, 'Yes'),
+        Button(.25, -.3, 'No'))
 
 # ------------------------------------------------------------
 # Administer a brief measure of temporal discounting
 # ------------------------------------------------------------
 
-get_amount('discount_1week', "Now suppose you've won a raffle with a cash prize. At your option, you may receive $20 right now or a larger amount of money one week in the future. What is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a week from now?")
+with dkey_prefix('discount'):
 
-get_amount('discount_1month', 'What if the delay was one month instead? Again, what is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a month from now?')
+    get_amount('week', "Now suppose you've won a raffle with a cash prize. At your option, you may receive $20 right now or a larger amount of money one week in the future. What is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a week from now?")
+
+    get_amount('month', 'What if the delay was one month instead? Again, what is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a month from now?')
 
 # ------------------------------------------------------------
 # Explain the stimuli, with examples
 # ------------------------------------------------------------
-
-splotch = SimpleImageStim(win, pos = (0, 125),
-    image = splotch_path_fmt % (example_splotch,))
 
 with showing(splotch):
     def instructions(dkey, string, *stimuli): button_screen(dkey,
         text(-.95, .75, string, hAlign = 'left', vAlign = 'top', wrap = .5),
         Button(0, -.8, 'Next'),
         *stimuli)
-    instructions('picture_explan_1', "Each of the gambles you'll be asked to evaluate will be presented as a picture like this.")
-    instructions('picture_explan_2', 'Each color represents the probability of a different outcome. Yellow represents the good outcome (cake), black represents the netural outcome (nothing), and blue represents the bad outcome (arithmetic). Each probability is expressed as area.')
-    instructions('picture_explan_3', "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the good outcome from this gamble is 1 out of 20.")
+
+    instructions(('picture_explan', 0), "Each of the gambles you'll be asked to evaluate will be presented as a picture like this.")
+
+    instructions(('picture_explan', 1), 'Each color represents the probability of a different outcome. Yellow represents the good outcome (cake), black represents the netural outcome (nothing), and blue represents the bad outcome (arithmetic). Each probability is expressed as area.')
+
+    instructions(('picture_explan', 2), "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the good outcome from this gamble is 1 out of 20.")
+
     instructions('mark_example', "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the good outcome, you would click on the point marked by the green line.",
         probability_scale(.3, -.5, fixed = .05))
 
@@ -289,30 +347,29 @@ with showing(splotch):
 
 with showing(splotch):
     for trial, splotch_num in enumerate(shuffled(test_splotches)):
-
-        def tkey(string): return ('gambles', trial, string)
         splotch.setImage(splotch_path_fmt % (splotch_num,))
-        data[tkey('splotch')] = splotch_num
-
-        scale_screen(tkey('probs'),
-            text(-.95, -.4, u'How likely is…', 'left'),
-            text(-.95, -.5, u'…the good outcome?', 'left'),
-            probability_scale(.3, -.5),
-            text(-.95, -.75, u'…the bad outcome?', 'left'),
-            probability_scale(.3, -.75))
-
-        scale_screen(tkey('appeal'),
-            text(0, -.5, 'How appealing do you find this gamble?'),
-            likert_scale('totally unappealing', 'very appealing'))
-
-        button_screen(tkey('choice'),
-            text(0, -.5, 'If you were offered this gamble, would you take it?'),
-            Button(-.25, -.75, 'Yes'),
-            Button(.25, -.75, 'No'))
+        with dkey_prefix(('gambles', trial)):
+            save('splotch', splotch_num)
+            scale_screen('probs',
+                text(-.95, -.4, u'How likely is…', 'left'),
+                text(-.95, -.5, u'…the good outcome?', 'left'),
+                probability_scale(.3, -.5),
+                text(-.95, -.75, u'…the bad outcome?', 'left'),
+                probability_scale(.3, -.75))
+            scale_screen('appeal',
+                text(0, -.5, 'How appealing do you find this gamble?'),
+                likert_scale('totally unappealing', 'very appealing'))
+            button_screen('choice',
+                text(0, -.5, 'If you were offered this gamble, would you take it?'),
+                Button(-.25, -.75, 'Yes'),
+                Button(.25, -.75, 'No'))
 
 # ------------------------------------------------------------
 # Done!
 # ------------------------------------------------------------
+
+with open("%s%d.json" % (output_path_prefix, subject), "w") as out:
+    json.dump(data, out, sort_keys = True, indent = 2)
 
 wait_screen(1,
     text(0, 0, 'Done!\n\nPlease let the experimenter know you are done.'))
