@@ -11,11 +11,12 @@ from psychopy.gui import Dlg
 from psychopy.core import wait
 from psychopy.event import Mouse, getKeys, clearEvents
 from psychopy.visual import \
-    Window, RatingScale, TextStim, SimpleImageStim, Circle
+    Window, ShapeStim, Circle, TextStim, SimpleImageStim, RatingScale
 
 output_path_prefix = argv[1]
 cake_image_path = argv[2]
 splotches = [1, 2]
+example_splotch = 20
 splotch_path_fmt = argv[3]
 likert_scale_max = 9
 button_radius = .1
@@ -64,10 +65,11 @@ class timestamps:
    def __enter__(self): self.timestamp()
    def __exit__(self, _1, _2, _3): self.timestamp()
 
-def text(x, y, string, hAlign = 'center', vAlign = 'center'):
+def text(x, y, string, hAlign = 'center', vAlign = 'center', wrap = None):
     return TextStim(win,
         text = string, pos = (x, y), color = 'black',
-        height = .075, alignHoriz = hAlign, alignVert = vAlign)
+        height = .075, alignHoriz = hAlign, alignVert = vAlign,
+        wrapWidth = wrap)
 
 def rating_scale(**a): return RatingScale(win,
     textColor = 'black', lineColor = 'black',
@@ -82,10 +84,26 @@ def likert_scale(lo, hi, x = 0, y = -.7): return rating_scale(
     high = likert_scale_max, highAnchorText = hi,
     pos = (x, y))
 
-def probability_scale(x, y):
-    rs = rating_scale(
+def probability_scale(x, y, fixed = None):
+    args = dict(
         low = 0, high = 1, pos = [x, y],
         lowAnchorText = 'impossible', highAnchorText = 'certain')
+    if fixed is not None: args['customMarker'] = text(0, 0, "")
+    rs = rating_scale(**args)
+    if fixed is not None:
+      # And now we abuse the object system to get rs.draw() to
+      # draw a tick mark along with the scale.
+        leftmost = min([v[0] for v in rs.line.vertices])
+        scale_width = max([v[0] for v in rs.line.vertices]) - leftmost
+        tick_x = fixed * scale_width + leftmost
+        rs.tick = ShapeStim(win,
+            vertices = ((tick_x, y + .05), (tick_x, y - .05)),
+            lineColor = "green", lineWidth = 3)
+        real_draw = RatingScale.draw
+        def my_draw():
+            real_draw(rs)
+            rs.tick.draw()
+        rs.draw = my_draw
     rs.precision = 1000
       # The constructor doesn't allow precisions above 100.
     return rs
@@ -239,16 +257,26 @@ button_screen('would_take_both',
 # Administer a brief measure of temporal discounting
 # ------------------------------------------------------------
 
-get_amount('discount_1week', "Now suppose you've won a raffle with a cash prize. At your option, you may receive $20 right now or a larger amount of money one week in the future. What is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately or the larger amount a week from now?")
+get_amount('discount_1week', "Now suppose you've won a raffle with a cash prize. At your option, you may receive $20 right now or a larger amount of money one week in the future. What is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a week from now?")
 
-get_amount('discount_1month', 'What if the delay was one month instead? Again, what is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately or the larger amount a month from now?')
+get_amount('discount_1month', 'What if the delay was one month instead? Again, what is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a month from now?')
 
 # ------------------------------------------------------------
 # Explain the stimuli, with examples
 # ------------------------------------------------------------
 
 splotch = SimpleImageStim(win, pos = (0, 125),
-    image = splotch_path_fmt % (1,))
+    image = splotch_path_fmt % (example_splotch,))
+
+with showing(splotch):
+    def instructions(dkey, string): button_screen(dkey,
+        text(-.95, .75, string, hAlign = 'left', vAlign = 'top', wrap = .5),
+        Button(0, -.8, 'Next'))
+    instructions("picture_explan_1", "Each of the gambles you'll be asked to evaluate will be presented as a picture like this.")
+    instructions("picture_explan_2", "Each color represents the probability of a different outcome. Yellow represents the good outcome (cake), black represents the netural outcome (nothing), and blue represents the bad outcome (arithmetic). Each probability is expressed as area.")
+    instructions("picture_explan_3", "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the good outcome from this gamble is 1 out of 20.")
+    with showing(probability_scale(.3, -.5, fixed = .05)):
+        instructions("mark_example", "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the good outcome, you would click on the point marked by the green line.")
 
 # ------------------------------------------------------------
 # Have the subject evaluate some gambles
