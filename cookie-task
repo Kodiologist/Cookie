@@ -32,7 +32,7 @@ button_radius = .1
 def shuffled(l): return sample(l, len(l))
 
 def staggered(l):
-    # staggered([1, 2, 3]) → [(1, 2), (2, 3), (3, None)]
+    'staggered([1, 2, 3]) → [(1, 2), (2, 3), (3, None)]'
     return zip(l, list(l[1:]) + [None])
 
 def tuplecat(a, b): return (
@@ -95,7 +95,8 @@ splotch = SimpleImageStim(win, pos = (0, 125),
     image = splotch_path_fmt % (example_splotch,))
 
 class showing:
-    '"with showing(foo, bar): …" ensures that foo and bar are implicitly drawn on each call to draw().'
+    '''"with showing(foo, bar): …" ensures that foo and bar are
+    implicitly drawn on each call to draw().'''
     implicitly_draw = []
     def __init__(self, *stimuli):
         self.stimuli = stimuli
@@ -163,6 +164,7 @@ def probability_scale(x, y, fixed = None):
     return rs
 
 class Button:
+
     def __init__(self, x, y, string):
         self.x, self.y, self.string, = x, y, string
         self.circle = Circle(win,
@@ -340,6 +342,10 @@ with showing(splotch):
 
     instructions('mark_example', "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the good outcome, you would click on the point marked by the green line.",
         probability_scale(.3, -.5, fixed = .05))
+
+button_screen('before_gambles',
+    text(0, .8, 'Now for the first gamble.', vAlign = 'top'),
+    Button(0, -.5, 'Next'))
 
 # ------------------------------------------------------------
 # Have the subject evaluate some gambles
