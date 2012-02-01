@@ -16,9 +16,11 @@ from cookie_gui import DlgSansCancel
 
 output_path_prefix = argv[1]
 cake_image_path = argv[2]
+splotch_path_fmt = argv[3]
+
 test_splotches = [22, 3, 11,   14, 28, 23,   29, 12, 1,   6, 15, 19]
 example_splotch = 20
-splotch_path_fmt = argv[3]
+
 likert_scale_max = 9
 button_radius = .1
 
@@ -162,10 +164,35 @@ def button_screen(dkey, *stimuli):
         data[dkey] = filter(lambda x: x.activated(), buttons)[0].string
     wait(.25)
 
+def get_amount(dkey, string):
+    "Ask for a monetary amount with the given prompt."
+    draw(
+        text(0, .8, string, vAlign = 'top'))
+    with timestamps(dkey):
+        trying_again = False
+        while True:
+            dialog = DlgSansCancel(
+                title = 'Entry',
+                pos = (screen_width/2 - approx_dialog_box_width, .85 * screen_height))
+            dialog.addText(' ' * 45)
+            dialog.addField('Amount:')
+            dialog.addText(
+                 'Invalid dollar amount; please try again.'
+                 if trying_again else '')
+            dialog.show()
+            amount = dialog.data[0]
+            mo = match(r'\s*\$?\s*(\d+(?:\.\d\d?)?)\s*$', amount)
+            if mo:
+                data[dkey] = mo.groups(1)[0]
+                break
+            else:
+                trying_again = True
+    wait(.25)
+
 def wait_screen(time_to_wait, *stimuli):
-   'Display some stimuli for a given amount of time.'
-   draw(*stimuli)
-   wait(time_to_wait)
+    'Display some stimuli for a given amount of time.'
+    draw(*stimuli)
+    wait(time_to_wait)
 
 # ------------------------------------------------------------
 # Get the subject number
@@ -192,30 +219,6 @@ def instructions(dkey, string): button_screen(dkey,
 def rating(dkey, string, lo, hi): return scale_screen(dkey,
     text(0, .3, string),
     likert_scale(lo, hi, y = -.3))
-
-def get_amount(dkey, string):
-    draw(
-        text(0, .8, string, vAlign = 'top'))
-    with timestamps(dkey):
-        trying_again = False
-        while True:
-            dialog = DlgSansCancel(
-                title = 'Entry',
-                pos = (screen_width/2 - approx_dialog_box_width, .85 * screen_height))
-            dialog.addText(' ' * 45)
-            dialog.addField('Amount:')
-            dialog.addText(
-                 'Invalid dollar amount; please try again.'
-                 if trying_again else '')
-            dialog.show()
-            amount = dialog.data[0]
-            mo = match(r'\s*\$?\s*(\d+(?:\.\d\d?)?)\s*$', amount)
-            if mo:
-                data[dkey] = mo.groups(1)[0]
-                break
-            else:
-                trying_again = True
-    wait(.25)
 
 instructions('first_page', 'In this task, you will be asked to evaluate several gambles. These gambles will be hypothetical, but try your best to imagine what you would choose if you were really offered them.\n\nEach gamble has three possible outcomes: good, neutral, and bad.')
 
@@ -270,14 +273,15 @@ splotch = SimpleImageStim(win, pos = (0, 125),
     image = splotch_path_fmt % (example_splotch,))
 
 with showing(splotch):
-    def instructions(dkey, string): button_screen(dkey,
+    def instructions(dkey, string, *stimuli): button_screen(dkey,
         text(-.95, .75, string, hAlign = 'left', vAlign = 'top', wrap = .5),
-        Button(0, -.8, 'Next'))
-    instructions("picture_explan_1", "Each of the gambles you'll be asked to evaluate will be presented as a picture like this.")
-    instructions("picture_explan_2", "Each color represents the probability of a different outcome. Yellow represents the good outcome (cake), black represents the netural outcome (nothing), and blue represents the bad outcome (arithmetic). Each probability is expressed as area.")
-    instructions("picture_explan_3", "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the good outcome from this gamble is 1 out of 20.")
-    with showing(probability_scale(.3, -.5, fixed = .05)):
-        instructions("mark_example", "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the good outcome, you would click on the point marked by the green line.")
+        Button(0, -.8, 'Next'),
+        *stimuli)
+    instructions('picture_explan_1', "Each of the gambles you'll be asked to evaluate will be presented as a picture like this.")
+    instructions('picture_explan_2', 'Each color represents the probability of a different outcome. Yellow represents the good outcome (cake), black represents the netural outcome (nothing), and blue represents the bad outcome (arithmetic). Each probability is expressed as area.')
+    instructions('picture_explan_3', "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the good outcome from this gamble is 1 out of 20.")
+    instructions('mark_example', "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the good outcome, you would click on the point marked by the green line.",
+        probability_scale(.3, -.5, fixed = .05))
 
 # ------------------------------------------------------------
 # Have the subject evaluate some gambles
