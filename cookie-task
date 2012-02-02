@@ -19,7 +19,8 @@ output_path_prefix = argv[1]
 cake_image_path = argv[2]
 splotch_path_fmt = argv[3]
 
-test_splotches = [22, 3, 11,   14, 28, 23,   29, 12, 1,   6, 15, 19]
+test_splotches = [
+    22, 3, 11,   14, 28, 23,   29, 12, 1,   6, 15, 19,   7, 30]
 example_splotch = 20
 
 likert_scale_max = 9
