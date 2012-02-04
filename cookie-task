@@ -316,7 +316,7 @@ with dkey_prefix('outcomes'):
     get_amount(('arithmetic', 'wtp'), 'Suppose you played this game: as before, you would pick an amount of money, and then the computer would randomly select a price less than $10. This time, if the randomly selected price was less than or equal to the amount of money you picked, you would have to pay the price without getting anything in return. On the other hand, if the price was greater than the amount you picked, you would have to do the long-division problems.\n\nWhat amount would you choose?')
 
     rating('overall_appeal',
-        'How would you feel if you got neither the good outcome nor the bad outcome?',
+        'How would you feel if you got neither the cake outcome nor the math outcome?',
         'very disappointed', 'very relieved')
 
     button_screen('would_take_both',
@@ -348,9 +348,9 @@ with showing(splotch):
 
     instructions(('picture_explan', 1), 'Each color represents the probability of a different outcome. Yellow represents the good outcome (cake), black represents the netural outcome (nothing), and blue represents the bad outcome (arithmetic). Each probability is expressed as area.')
 
-    instructions(('picture_explan', 2), "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the good outcome from this gamble is 1 out of 20.")
+    instructions(('picture_explan', 2), "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the cake outcome from this gamble is 1 out of 20.")
 
-    instructions('mark_example', "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the good outcome, you would click on the point marked by the green line.",
+    instructions('mark_example', "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the cake outcome, you would click on the point marked by the green line.",
         probability_scale(.3, -.5, fixed = .05))
 
 button_screen('before_gambles',
@@ -368,9 +368,9 @@ with showing(splotch):
             save('splotch', splotch_num)
             scale_screen('probs',
                 text(-.95, -.4, u'How likely is…', 'left'),
-                text(-.95, -.5, u'…the good outcome?', 'left'),
+                text(-.95, -.5, u'…the cake outcome?', 'left'),
                 probability_scale(.3, -.5),
-                text(-.95, -.75, u'…the bad outcome?', 'left'),
+                text(-.95, -.75, u'…the math outcome?', 'left'),
                 probability_scale(.3, -.75))
             scale_screen('appeal',
                 text(0, -.5, 'How appealing do you find this gamble?'),
