@@ -263,13 +263,13 @@ def wait_screen(time_to_wait, *stimuli):
 
 dialog = Dlg(title = 'Decision-Making')
 dialog.addText('')
-dialog.addField('Subject Number:', 0)
+dialog.addField('Subject ID:', 't0')
 dialog.addText('')
 dialog.show()
 
 if not dialog.OK: exit()
 
-subject = int(dialog.data[0])
+subject = dialog.data[0]
 save('subject', subject)
 
 # ------------------------------------------------------------
@@ -384,7 +384,7 @@ with showing(splotch):
 # Done!
 # ------------------------------------------------------------
 
-with open("%s%d.json" % (output_path_prefix, subject), "w") as out:
+with open("%s%s.json" % (output_path_prefix, subject), "w") as out:
     json.dump(data, out, sort_keys = True, indent = 2)
 
 wait_screen(1,
