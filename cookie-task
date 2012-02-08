@@ -50,7 +50,8 @@ def save(key, value):
     """Set a value in data with Perl-style autovivification, so
     save(('times', 3, 'orange'), 'x') is like
     data['times'][3]['orange'] = 'x' but works even if the
-    intermediate data structures don't exist yet."""
+    intermediate data structures don't exist yet (or, in the
+    case of lists, are too short)."""
     key = tuplecat(tuple(dkey_prefix.p), key)
     if isinstance(key, tuple):
         seq = data
@@ -135,6 +136,12 @@ def text(x, y, string, hAlign = 'center', vAlign = 'center', wrap = None):
         text = string, pos = (x, y), color = 'black',
         height = .075, alignHoriz = hAlign, alignVert = vAlign,
         wrapWidth = wrap)
+
+def rect(pos, width, height, color): return ShapeStim(win,
+    # "pos" is the upper left-hand corner.
+    vertices = (pos, (pos[0] + width, pos[1]),
+        (pos[0] + width, pos[1] - height), (pos[0], pos[1] - height)),
+    fillColor = color)
 
 def rating_scale(**a): return RatingScale(win,
     textColor = 'black', lineColor = 'black',
@@ -368,8 +375,10 @@ with showing(splotch):
             save('splotch', splotch_num)
             scale_screen('probs',
                 text(-.95, -.4, u'How likely is…', 'left'),
+                rect((-.975, -.5 + .05), .625, .1, (1, 1, 0)),
                 text(-.95, -.5, u'…the cake outcome?', 'left'),
                 probability_scale(.3, -.5),
+                rect((-.975, -.75 + .05), .625, .1, (0, .5, 1)),
                 text(-.95, -.75, u'…the math outcome?', 'left'),
                 probability_scale(.3, -.75))
             scale_screen('appeal',
