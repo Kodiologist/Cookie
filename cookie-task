@@ -248,7 +248,8 @@ def get_amount(dkey, string):
             dialog.addField('Amount:')
             dialog.addText(
                  'Invalid dollar amount; please try again.'
-                 if trying_again else '')
+                 if trying_again
+                 else 'Enter a dollar amount. Cents are allowed.')
             dialog.show()
             amount = dialog.data[0]
             mo = match(r'\s*\$?\s*(\d+(?:\.\d\d?)?)\s*$', amount)
@@ -312,7 +313,7 @@ with dkey_prefix('outcomes'):
         'How appealing do you find this cake outcome?',
         'totally unappealing', 'very appealing')
 
-    get_amount(('cake', 'wtp'), "Now, suppose you played the following game: you would pick an amount of money (say, $5.50), and then the computer would randomly select a price less than $10. If the randomly selected price was less than or equal to the amount of money you picked, you would be obliged to buy the piece of cake for the price. But if the price was greater than the amount you picked, you wouldn't be able to buy the cake even if you wanted to.\n\nWhat amount would you choose?")
+    get_amount(('cake', 'wtp'), "Now, suppose you played the following game: you would pick an amount of money and then the computer would randomly select a price less than $20. If the randomly selected price was less than or equal to the amount of money you picked, you would be obliged to buy the piece of cake for the price. But if the price was greater than the amount you picked, you wouldn't be able to buy the cake even if you wanted to.\n\nWhat amount would you choose?")
 
     instructions(('arithmetic', 'description'), "If you get the bad outcome, we'll ask you to solve a set of long-division problems, which we expect will take about half an hour.")
 
@@ -320,7 +321,7 @@ with dkey_prefix('outcomes'):
         'How appealing do you find this arithmetic outcome?',
         'totally unappealing', 'very appealing')
 
-    get_amount(('arithmetic', 'wtp'), 'Suppose you played this game: as before, you would pick an amount of money, and then the computer would randomly select a price less than $10. This time, if the randomly selected price was less than or equal to the amount of money you picked, you would have to pay the price without getting anything in return. On the other hand, if the price was greater than the amount you picked, you would have to do the long-division problems.\n\nWhat amount would you choose?')
+    get_amount(('arithmetic', 'wtp'), 'Suppose you played this game: as before, you would pick an amount of money, and then the computer would randomly select a price less than $20. This time, if the randomly selected price was less than or equal to the amount of money you picked, you would have to pay the price without getting anything in return. On the other hand, if the price was greater than the amount you picked, you would have to do the long-division problems.\n\nWhat amount would you choose?')
 
     rating('overall_appeal',
         'How would you feel if you got neither the cake outcome nor the math outcome?',
