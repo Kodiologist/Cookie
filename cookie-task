@@ -147,10 +147,10 @@ def tick(x, y): return ShapeStim(win,
     vertices = ((x, y + .05), (x, y - .05)),
     lineColor = "green", lineWidth = 3)
 
-def rating_scale(**a): return RatingScale(win,
+def rating_scale(stretchHoriz = 1.75, **a): return RatingScale(win,
     textColor = 'black', lineColor = 'black',
     markerStyle = 'circle', markerColor = 'darkgreen',
-    stretchHoriz = 1.75,
+    stretchHoriz = stretchHoriz,
     showValue = False, allowSkip = False, showScale = False,
     escapeKeys = ['escape'], singleClick = True, showAccept = False,
     **a)
@@ -162,7 +162,7 @@ def likert_scale(lo, hi, x = 0, y = -.7): return rating_scale(
 
 def probability_scale(x, y, fixed = None):
     args = dict(
-        low = 0, high = 1, pos = [x, y],
+        low = 0, high = 1, pos = [x, y], stretchHoriz = 2.5,
         lowAnchorText = 'impossible', highAnchorText = 'certain')
     args['customMarker'] = (
         tick(0, 0) if fixed is None else text(0, 0, ""))
@@ -363,7 +363,7 @@ with showing(splotch):
     instructions(('picture_explan', 2), "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the cake outcome from this gamble is 1 out of 20.")
 
     instructions('mark_example', "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the cake outcome, you would click on the point marked by the green line.",
-        probability_scale(.3, -.5, fixed = .05))
+        probability_scale(0, -.5, fixed = .05))
 
 button_screen('before_gambles',
     text(0, .8, 'Now for the first gamble.', vAlign = 'top'),
@@ -373,19 +373,25 @@ button_screen('before_gambles',
 # Have the subject evaluate some gambles
 # ------------------------------------------------------------
 
+label_x = -.25
+scale_1_y = -.45
+scale_2_y = -.7
+
 with showing(splotch):
     for trial, splotch_num in enumerate(shuffled(test_splotches)):
         splotch.setImage(splotch_path_fmt % (splotch_num,))
         with dkey_prefix(('gambles', trial)):
             save('splotch', splotch_num)
             scale_screen('probs',
-                text(-.95, -.4, u'How likely is…', 'left'),
-                rect((-.975, -.5 + .05), .625, .1, (1, 1, 0)),
-                text(-.95, -.5, u'…the cake outcome?', 'left'),
-                probability_scale(.3, -.5),
-                rect((-.975, -.75 + .05), .625, .1, (0, .5, 1)),
-                text(-.95, -.75, u'…the math outcome?', 'left'),
-                probability_scale(.3, -.75))
+                text(-.95, -.2, u'How likely is…', 'left'),
+                rect((label_x - .025, scale_1_y - .05), .625, .1,
+                    (1, 1, 0)),
+                text(label_x, scale_1_y - .1, u'…the cake outcome?', 'left'),
+                probability_scale(0, scale_1_y),
+                rect((label_x - .025, scale_2_y - .05), .625, .1,
+                    (0, .5, 1)),
+                text(label_x, scale_2_y - .1, u'…the math outcome?', 'left'),
+                probability_scale(0, scale_2_y))
             scale_screen('appeal',
                 text(0, -.5, 'How appealing do you find this gamble?'),
                 likert_scale('totally unappealing', 'very appealing'))
