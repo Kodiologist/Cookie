@@ -143,6 +143,10 @@ def rect(pos, width, height, color): return ShapeStim(win,
         (pos[0] + width, pos[1] - height), (pos[0], pos[1] - height)),
     fillColor = color)
 
+def tick(x, y): return ShapeStim(win,
+    vertices = ((x, y + .05), (x, y - .05)),
+    lineColor = "green", lineWidth = 3)
+
 def rating_scale(**a): return RatingScale(win,
     textColor = 'black', lineColor = 'black',
     markerStyle = 'circle', markerColor = 'darkgreen',
@@ -160,17 +164,17 @@ def probability_scale(x, y, fixed = None):
     args = dict(
         low = 0, high = 1, pos = [x, y],
         lowAnchorText = 'impossible', highAnchorText = 'certain')
-    if fixed is not None: args['customMarker'] = text(0, 0, "")
+    args['customMarker'] = (
+        tick(0, 0) if fixed is None else text(0, 0, ""))
+           # The empty text object is invisible.
     rs = rating_scale(**args)
     if fixed is not None:
       # And now we abuse the object system to get rs.draw() to
-      # draw a tick mark along with the scale.
+      # draw a fixed tick mark along with the scale.
         leftmost = min([v[0] for v in rs.line.vertices])
         scale_width = max([v[0] for v in rs.line.vertices]) - leftmost
         tick_x = fixed * scale_width + leftmost
-        rs.tick = ShapeStim(win,
-            vertices = ((tick_x, y + .05), (tick_x, y - .05)),
-            lineColor = "green", lineWidth = 3)
+        rs.tick = tick(tick_x, y)
         real_draw = RatingScale.draw
         def my_draw():
             real_draw(rs)
@@ -338,12 +342,12 @@ with dkey_prefix('outcomes'):
 
 with dkey_prefix('discount'):
 
-    get_amount('week', "Now suppose you've won a raffle with a cash prize. At your option, you may receive $20 right now or a larger amount of money one week in the future. What is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a week from now?")
+   get_amount('week', "Now suppose you've won a raffle with a cash prize. At your option, you may receive $20 right now or a larger amount of money one week in the future. What is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a week from now?")
 
-    get_amount('month', 'What if the delay was one month instead? Again, what is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a month from now?')
+   get_amount('month', 'What if the delay was one month instead? Again, what is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a month from now?')
 
 # ------------------------------------------------------------
-# Explain the stimuli, with examples
+# Explain the stimuli, with an example
 # ------------------------------------------------------------
 
 with showing(splotch):
