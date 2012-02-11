@@ -6,6 +6,7 @@ from math import sqrt
 from re import match
 from random import sample, choice
 from datetime import datetime
+from types import MethodType
 from psychopy.monitors import Monitor
 from psychopy.gui import Dlg
 from psychopy.core import wait
@@ -175,13 +176,22 @@ def probability_scale(x, y, fixed = None):
         scale_width = max([v[0] for v in rs.line.vertices]) - leftmost
         tick_x = fixed * scale_width + leftmost
         rs.tick = tick(tick_x, y)
-        real_draw = RatingScale.draw
-        def my_draw():
-            real_draw(rs)
+        def f(self):
             rs.tick.draw()
-        rs.draw = my_draw
-    rs.precision = 1000
-      # The constructor doesn't allow precisions above 100.
+            RatingScale.draw(self)
+        rs.draw = MethodType(f, rs, RatingScale)
+    # We set the precision beyond the constructor's maximum (100)
+    # so the marker can move to any pixel on the scale, but we
+    # also override RatingScale.getRating so that the user's
+    # choice isn't filtered through the precision and so on.
+    rs.precision = 1e20
+    def f(self, mouseX):
+        self.actual_val = (
+            min(max(mouseX, self.lineLeftEnd), self.lineRightEnd) -
+            self.lineLeftEnd) / (self.lineRightEnd - self.lineLeftEnd)
+        return RatingScale._getMarkerFromPos(self, mouseX)
+    rs._getMarkerFromPos = MethodType(f, rs, RatingScale)
+    rs.getRating = MethodType(lambda self: self.actual_val, rs, RatingScale)
     return rs
 
 class Button:
