@@ -337,7 +337,7 @@ with dkey_prefix('outcomes'):
 
     get_amount(('arithmetic', 'wtp'), 'Suppose you played this game: as before, you would pick an amount of money, and then the computer would randomly select a price less than $20. This time, if the randomly selected price was less than or equal to the amount of money you picked, you would have to pay the price without getting anything in return. On the other hand, if the price was greater than the amount you picked, you would have to do the long-division problems.\n\nWhat amount would you choose?')
 
-    rating('overall_appeal',
+    rating('neither_appeal',
         'How would you feel if you got neither the cake outcome nor the math outcome?',
         'very disappointed', 'very relieved')
 
