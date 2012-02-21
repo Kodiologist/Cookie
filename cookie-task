@@ -19,9 +19,10 @@ from socket import gethostname
 from cookie_gui import DlgSansCancel
 
 output_path_prefix = argv[1] if len(argv) >= 2 else "results_"
-cake_image_path = argv[2] if len(argv) >= 3 else "cake.png"
-splotch_path_fmt = argv[3] if len(argv) >= 4 else "splotches/%d.png"
-commit_path = argv[4] if len(argv) >= 5 else "commit.txt"
+color_cake_image_path = argv[2] if len(argv) >= 3 else "cakec.png"
+gray_cake_image_path = argv[3] if len(argv) >= 4 else "cakeg.png"
+splotch_path_fmt = argv[4] if len(argv) >= 5 else "splotches/%d.png"
+commit_path = argv[5] if len(argv) >= 6 else "commit.txt"
 
 test_splotches = [
     22, 3, 11,   14, 28, 23,   29, 12, 1,   6, 15, 19,   7, 30]
@@ -312,22 +313,21 @@ with dkey_prefix('outcomes'):
 
     instructions('neutral_description', 'If you get the neutral outcome, nothing happens.')
 
-    instructions(('cake', 'description'), 'If you get the good outcome, you win a generous piece of chocolate cake!')
+    instructions(('cake', 'description'), 'If you get the good outcome, you win a cupcake!')
 
-    if choice((False, True)):
-        save(('cake', 'showed_picture'), True)
-        button_screen('cake_picture',
-            text(0, .8, "Here's what the cake looks like:", vAlign = "top"),
-            SimpleImageStim(win, image = cake_image_path),
-            Button(0, -.8, 'Next'))
-    else:
-        save(('cake', 'showed_picture'), False)
+    color_cake_picture = choice((False, True))
+    save(('cake', 'picture'), "color" if color_cake_picture else "gray")
+    button_screen('cake_picture',
+        text(0, .9, "Here's what the cupcakes look like:", vAlign = "top"),
+        SimpleImageStim(win, image =
+            color_cake_image_path if color_cake_picture else gray_cake_image_path),
+        Button(0, -.9, 'Next'))
 
     rating(('cake', 'appeal'),
         'How appealing do you find this cake outcome?',
         'totally unappealing', 'very appealing')
 
-    get_amount(('cake', 'wtp'), "Now, suppose you played the following game: you would pick an amount of money and then the computer would randomly select a price less than $20. If the randomly selected price was less than or equal to the amount of money you picked, you would be obliged to buy the piece of cake for the price. But if the price was greater than the amount you picked, you wouldn't be able to buy the cake even if you wanted to.\n\nWhat amount would you choose?")
+    get_amount(('cake', 'wtp'), "Now, suppose you played the following game: you would pick an amount of money and then the computer would randomly select a price less than $20. If the randomly selected price was less than or equal to the amount of money you picked, you would be obliged to buy a cupcake for the price. But if the price was greater than the amount you picked, you wouldn't be able to buy the cake even if you wanted to.\n\nWhat amount would you choose?")
 
     instructions(('arithmetic', 'description'), "If you get the bad outcome, we'll ask you to solve a set of long-division problems, which we expect will take about half an hour.")
 
@@ -342,7 +342,7 @@ with dkey_prefix('outcomes'):
         'very disappointed', 'very relieved')
 
     button_screen('would_take_both',
-        text(0, .3, 'If you were offered the cake in exchange for doing the division problems, would you take it?'),
+        text(0, .3, 'If you were offered a cupcake in exchange for doing the division problems, would you take it?'),
         Button(-.25, -.3, 'Yes'),
         Button(.25, -.3, 'No'))
 
