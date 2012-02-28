@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # encoding: UTF-8
+VERSION = 'undeployed'
 
 from sys import argv
 from math import sqrt
@@ -22,7 +23,6 @@ output_path_prefix = argv[1] if len(argv) >= 2 else "results_"
 color_cake_image_path = argv[2] if len(argv) >= 3 else "cakec.jpg"
 gray_cake_image_path = argv[3] if len(argv) >= 4 else "cakeg.jpg"
 splotch_path_fmt = argv[4] if len(argv) >= 5 else "splotches/%d.png"
-commit_path = argv[5] if len(argv) >= 6 else "commit.txt"
 
 test_splotches = [
     22, 3, 11,   14, 28, 23,   35, 37, 31,   6, 15, 19,   7, 30]
@@ -87,8 +87,7 @@ class dkey_prefix:
         dkey_prefix.p = dkey_prefix.p[len(self.x):]
 
 save(('sys', 'hostname'), gethostname())
-with open(commit_path, "r") as f:
-    save('commit', f.readline().strip())
+save('commit', VERSION)
 
 class timestamps:
    def __init__(self, dkey):
