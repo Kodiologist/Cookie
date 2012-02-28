@@ -25,7 +25,7 @@ splotch_path_fmt = argv[4] if len(argv) >= 5 else "splotches/%d.png"
 commit_path = argv[5] if len(argv) >= 6 else "commit.txt"
 
 test_splotches = [
-    22, 3, 11,   14, 28, 23,   29, 12, 1,   6, 15, 19,   7, 30]
+    22, 3, 11,   14, 28, 23,   35, 37, 31,   6, 15, 19,   7, 30]
 example_splotch = 20
 
 likert_scale_max = 9
