@@ -419,7 +419,7 @@ with showing(splotch):
     example_gamble_instructions(('picture_explan', 2), "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the brownie outcome from this gamble is 1 out of 20.")
 
     with showing(probability_scale(0, -.5, fixed = .05)):
-        example_gamble_instructions('mark_example', "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the brownie outcome, you would click on the point marked by the green line.")
+        example_gamble_instructions('mark_example', "You'll provide judgments of probability using a linear scale like this. In this case, if you were asked the probability of the brownie outcome, you would click on the point marked by the green line.")
 
         example_gamble_instructions('click_precisely', "Please take your time and CLICK PRECISELY. You'll need to be careful in order to make these judgments accurately.")
 
