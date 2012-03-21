@@ -4,6 +4,7 @@ VERSION = 'undeployed'
 
 from sys import argv
 from math import sqrt
+from itertools import permutations
 from re import match
 from random import sample, choice
 from datetime import datetime
@@ -20,9 +21,8 @@ from socket import gethostname
 from cookie_gui import DlgSansCancel
 
 output_path_prefix = argv[1] if len(argv) >= 2 else "results_"
-color_cake_image_path = argv[2] if len(argv) >= 3 else "cakec.jpg"
-gray_cake_image_path = argv[3] if len(argv) >= 4 else "cakeg.jpg"
-splotch_path_fmt = argv[4] if len(argv) >= 5 else "splotches/%d.png"
+splotch_path_fmt = argv[2] if len(argv) >= 3 else "splotches/%d.png"
+condition_permutations_path = argv[3] if len(argv) >= 4 else 'condition-perms.txt'
 
 test_splotches = [
     22, 3, 11,   14, 28, 23,   35, 37, 31,   6, 15, 19,   7, 30]
@@ -283,16 +283,39 @@ def wait_screen(time_to_wait, *stimuli):
 # Get the subject number
 # ------------------------------------------------------------
 
-dialog = Dlg(title = 'Decision-Making')
-dialog.addText('')
-dialog.addField('Subject ID:', 't0')
-dialog.addText('')
-dialog.show()
-
-if not dialog.OK: exit()
-
-subject = dialog.data[0]
+while True:
+    dialog = Dlg(title = 'Decision-Making')
+    dialog.addText('')
+    dialog.addField('Subject ID:', 't0')
+    dialog.addText('')
+    dialog.show()
+    if not dialog.OK: exit()
+    subject = dialog.data[0]
+    mo = search(r'\d+$', subject)
+    if mo: break
+    message('The subject ID must end with a number.')
 save('subject', subject)
+condition_index = int(mo.group())
+
+# Assign a condition by using the random numbers in
+# condition_permutations_path to pick a permutation of conditions
+# and then indexing into the tuple of permutations. This gives
+# each subject an equal chance of getting each condition while
+# ensuring cell sizes are as close to equal as possible.
+
+possible_conditions = (
+   dict(brownie_present = False),
+   dict(brownie_present = True))
+condition_perms = tuple(permutations(possible_conditions))
+with open(condition_permutations_path, "r") as ps:
+    condition = (
+        condition_perms[int(
+                ps.readlines()[condition_index / len(possible_conditions)]
+                    .strip())]
+            [condition_index % len(possible_conditions)])
+brownie_present = condition['brownie_present']
+save('brownie_condition',
+    'present' if brownie_present else 'absent')
 
 # ------------------------------------------------------------
 # Explain the gamble outcomes
@@ -308,25 +331,20 @@ def rating(dkey, string, lo, hi): return scale_screen(dkey,
 
 with dkey_prefix('outcomes'):
 
-    instructions('first_page', 'In this task, you will be asked to evaluate several gambles. These gambles will be hypothetical, but try your best to imagine what you would choose if you were really offered them.\n\nEach gamble has three possible outcomes: good, neutral, and bad.')
+    instructions('first_page', "In this task, you will be asked to evaluate several gambles. If you like, you'll be able to take one of the gambles.\n\nEach gamble has three possible outcomes: good, neutral, and bad.")
 
     instructions('neutral_description', 'If you get the neutral outcome, nothing happens.')
 
-    instructions(('cake', 'description'), 'If you get the good outcome, you win a cupcake!')
+    instructions(('brownie', 'description'), 'If you get the good outcome, you win a homemade chocolate-caramel brownie!')
 
-    color_cake_picture = choice((False, True))
-    save(('cake', 'picture'), "color" if color_cake_picture else "gray")
-    button_screen('cake_picture',
-        text(0, .9, "Here's what the cupcakes look like:", vAlign = "top"),
-        SimpleImageStim(win, image =
-            color_cake_image_path if color_cake_picture else gray_cake_image_path),
-        Button(0, -.9, 'Next'))
+    if brownie_present:
+        instructions(('brownie', 'look'), "Lift the box beside you and put it on the floor. Be careful not to touch the sample brownie.")
 
-    rating(('cake', 'appeal'),
-        'How appealing do you find this cake outcome?',
+    rating(('brownie', 'appeal'),
+        'How appealing do you find this brownie outcome?',
         'totally unappealing', 'very appealing')
 
-    get_amount(('cake', 'wtp'), "Now, suppose you played the following game: you would pick an amount of money and then the computer would randomly select a price less than $20. If the randomly selected price was less than or equal to the amount of money you picked, you would be obliged to buy a cupcake for the price. But if the price was greater than the amount you picked, you wouldn't be able to buy the cake even if you wanted to.\n\nWhat amount would you choose?")
+    get_amount(('brownie', 'wtp'), "Now, suppose you played the following game: you would pick an amount of money and then the computer would randomly select a price less than $20. If the randomly selected price was less than or equal to the amount of money you picked, you would be obliged to buy a brownie for the price. But if the price was greater than the amount you picked, you wouldn't be able to buy the brownie even if you wanted to.\n\nWhat amount would you choose?")
 
     instructions(('arithmetic', 'description'), "If you get the bad outcome, we'll ask you to solve a set of long-division problems, which we expect will take about half an hour.")
 
@@ -337,11 +355,11 @@ with dkey_prefix('outcomes'):
     get_amount(('arithmetic', 'wtp'), 'Suppose you played this game: as before, you would pick an amount of money, and then the computer would randomly select a price less than $20. This time, if the randomly selected price was less than or equal to the amount of money you picked, you would have to pay the price without getting anything in return. On the other hand, if the price was greater than the amount you picked, you would have to do the long-division problems.\n\nWhat amount would you choose?')
 
     rating('neither_appeal',
-        'How would you feel if you got neither the cake outcome nor the math outcome?',
+        'How would you feel if you got neither the brownie outcome nor the math outcome?',
         'very disappointed', 'very relieved')
 
     button_screen('would_take_both',
-        text(0, .3, 'If you were offered a cupcake in exchange for doing the division problems, would you take it?'),
+        text(0, .3, 'If you were offered a brownie in exchange for doing the division problems, would you take it?'),
         Button(-.25, -.3, 'Yes'),
         Button(.25, -.3, 'No'))
 
@@ -367,12 +385,12 @@ with showing(splotch):
 
     instructions(('picture_explan', 0), "Each of the gambles you'll be asked to evaluate will be presented as a picture like this.")
 
-    instructions(('picture_explan', 1), 'Each color represents the probability of a different outcome. Yellow represents the good outcome (cake), black represents the netural outcome (nothing), and blue represents the bad outcome (arithmetic). Each probability is expressed as area.')
+    instructions(('picture_explan', 1), 'Each color represents the probability of a different outcome. Yellow represents the good outcome (a brownie), black represents the netural outcome (nothing), and blue represents the bad outcome (arithmetic). Each probability is expressed as area.')
 
-    instructions(('picture_explan', 2), "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the cake outcome from this gamble is 1 out of 20.")
+    instructions(('picture_explan', 2), "For example, one-twentieth of this image's area is yellow. Thus, the probability of getting the brownie outcome from this gamble is 1 out of 20.")
 
     with showing(probability_scale(0, -.5, fixed = .05)):
-        instructions('mark_example', "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the cake outcome, you would click on the point marked by the green line.")
+        instructions('mark_example', "You'll provide your judgments of probability using a linear scale like this. In this case, if you were asked the probability of the brownie outcome, you would click on the point marked by the green line.")
 
         instructions('click_precisely', "Please take your time and CLICK PRECISELY. You'll need to be careful in order to make these judgments accurately.")
 
@@ -397,7 +415,7 @@ with showing(splotch):
                 text(-.95, -.2, u'How likely is…', 'left'),
                 rect((label_x - .025, scale_1_y - .05), .625, .1,
                     (1, 1, 0)),
-                text(label_x, scale_1_y - .1, u'…the cake outcome?', 'left'),
+                text(label_x, scale_1_y - .1, u'…the brownie outcome?', 'left'),
                 probability_scale(0, scale_1_y),
                 rect((label_x - .025, scale_2_y - .05), .625, .1,
                     (0, .5, 1)),
