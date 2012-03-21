@@ -367,7 +367,7 @@ with dkey_prefix('outcomes'):
     instructions(('brownie', 'description'), 'If you get the good outcome, you win a homemade chocolate-caramel brownie!')
 
     if brownie_present:
-        instructions(('brownie', 'look'), "Lift the box beside you and put it on the floor. Be careful not to touch the sample brownie.")
+        instructions(('brownie', 'look'), "Carefully lift the box on the desk beside you and put it on the floor. You'll find a sample brownie underneath. Don't touch it.")
 
     rating(('brownie', 'appeal'),
         'How appealing do you find this brownie outcome?',
