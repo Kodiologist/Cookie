@@ -427,7 +427,7 @@ instructions('after_prob_judgments', "In addition to these probability judgments
 
 instructions('only_one_gamble_counts', "After you've evaluated all of the gambles, one of them will be chosen at random to count for real. If you said you'd take that gamble, you'll get a brownie, arithmetic, or nothing, according to the gamble's probabilites. But if you said you wouldn't take the gamble, you won't have to take it, and nothing more will happen.")
 
-instructions('one_gamble_counting_implies', "Since you can't tell in advance which gamble will count for real, you'll need to decide carefully for all of them.")
+instructions('one_gamble_counting_implies', "Since you can't tell in advance which gamble will count for real, you'll need to think carefully for all of them.")
 
 instructions('before_gambles', 'Now for the first gamble.')
 
