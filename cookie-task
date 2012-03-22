@@ -282,7 +282,7 @@ def integer_math_problem(dkey, string):
     def extractor(inp):
         mo = match(r'\s*(\d+)\s*$', inp)
         if mo:
-            return mo.groups(1)
+            return mo.groups(1)[0]
         return None
     get_string(dkey, string,
         dialog_field_label = 'Your answer:',
