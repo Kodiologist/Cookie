@@ -337,8 +337,8 @@ condition_index = int(mo.group())
 # ensuring cell sizes are as close to equal as possible.
 
 possible_conditions = (
-   dict(brownie_present = False),
-   dict(brownie_present = True))
+   dict(brownie_visible = False),
+   dict(brownie_visible = True))
 condition_perms = tuple(permutations(possible_conditions))
 with open(condition_permutations_path, "r") as ps:
     condition = (
@@ -346,9 +346,9 @@ with open(condition_permutations_path, "r") as ps:
                 ps.readlines()[condition_index / len(possible_conditions)]
                     .strip())]
             [condition_index % len(possible_conditions)])
-brownie_present = condition['brownie_present']
+brownie_visible = condition['brownie_visible']
 save('brownie_condition',
-    'present' if brownie_present else 'absent')
+    'visible' if brownie_visible else 'hidden')
 
 # ------------------------------------------------------------
 # Explain the gamble outcomes
@@ -366,7 +366,7 @@ with dkey_prefix('outcomes'):
 
     instructions(('brownie', 'description'), 'If you get the good outcome, you win a homemade chocolate-caramel brownie!')
 
-    if brownie_present:
+    if brownie_visible:
         instructions(('brownie', 'look'), "Carefully lift the box on the desk beside you and put the box on the floor. You'll find a sample brownie underneath. Leave the brownie and the plate where they are on the desk.")
 
     rating(('brownie', 'appeal'),
@@ -504,9 +504,9 @@ with dkey_prefix('payout'):
 
 if inflict_bad_outcome:
     with dkey_prefix('division'):
-        integer_math_problem('bad_outcome_p1_9/1', 'What is 9 divided by 1?')
-        integer_math_problem('bad_outcome_p2_50/10', 'What is 50 divided by 10?')
-        integer_math_problem('bad_outcome_p3_24/8', 'What is 24 divided by 8?')
+        integer_math_problem('p1_9/1', 'What is 9 divided by 1?')
+        integer_math_problem('p2_50/10', 'What is 50 divided by 10?')
+        integer_math_problem('p3_24/8', 'What is 24 divided by 8?')
         #instructions('bad_outcome_done', "Actually, having you do half an hour of division problems would be a waste of your time as well as ours, so let's wrap this up.")
 
 # ------------------------------------------------------------
