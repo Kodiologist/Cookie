@@ -509,6 +509,18 @@ with dkey_prefix('discount'):
    get_amount('month', 'What if the delay was one month instead? Again, what is the smallest amount of money that would have to be offered at this future time in order for you to be indifferent between the two options, $20 immediately and the larger amount a month from now?')
 
 # ------------------------------------------------------------
+# Ask about an unrelated risky decision
+# ------------------------------------------------------------
+
+button_screen('oneshot',
+    text(0, .5, 'Which of the following would you prefer?'),
+    Button(-.5, 0, 'A'), text(-.3, 0, hAlign = 'left', string =
+        'Getting $10'),
+    Button(-.5, -.5, 'B'), text(-.3, -.5, hAlign = 'left', string =
+        'A 50% chance of getting $30 and\n'
+        'a 50% chance of losing $5'))
+
+# ------------------------------------------------------------
 # Explain the stimuli, with an example
 # ------------------------------------------------------------
 
