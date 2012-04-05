@@ -4,6 +4,7 @@ VERSION = 'undeployed'
 
 from sys import argv
 from math import sqrt
+from copy import deepcopy
 from itertools import permutations
 from re import match, search
 from random import sample, choice, randint
@@ -16,6 +17,7 @@ from psychopy.event import Mouse, getKeys, clearEvents
 from psychopy.visual import \
     Window, ShapeStim, Circle, TextStim, SimpleImageStim, RatingScale
 import pyglet
+import wx
 import json
 from socket import gethostname
 from cookie_gui import DlgSansCancel
@@ -31,7 +33,13 @@ test_splotches = [
 example_splotch = 20
 
 likert_scale_max = 9
+
 button_radius = .1
+approx_dialog_box_width = 200
+questionnaire_dialog_width = 750
+questionnaire_dialog_height = 600
+wx_text_wrap_width = 300
+questions_per_page = 8
 
 # ------------------------------------------------------------
 # Helper functions and classes
@@ -103,13 +111,12 @@ class timestamps:
        self.timestamp(1)
 
 # ------------------------------------------------------------
-# Stimuli
+# Stimuli (PsychoPy)
 # ------------------------------------------------------------
 
 pyglet_screen = pyglet.window.get_platform().get_default_display().get_default_screen()
 screen_width, screen_height = pyglet_screen.width, pyglet_screen.height
 save(('sys', 'resolution'), (screen_width, screen_height));
-approx_dialog_box_width = 200
 win = Window((screen_width, screen_height),
     monitor = 'testMonitor',
     winType = 'pyglet', fullscr = False,
@@ -291,6 +298,13 @@ def get_amount(dkey, string):
         dialog_error = 'Invalid dollar amount; please try again.',
         extractor = extractor)
 
+def message_dialog(string):
+    dialog = Dlg(title = '')
+    dialog.addText('')
+    dialog.addText(string)
+    dialog.addText('')
+    dialog.show()
+
 def wait_screen(time_to_wait, *stimuli):
     'Display some stimuli for a given amount of time.'
     draw(*stimuli)
@@ -299,6 +313,83 @@ def wait_screen(time_to_wait, *stimuli):
 def instructions(dkey, string): button_screen(dkey,
     text(0, .8, string, vAlign = 'top'),
     Button(0, -.5, 'Next'))
+
+# ------------------------------------------------------------
+# Stimuli (mostly pure WxPython)
+# ------------------------------------------------------------
+
+def wrapped_text(parent, string):
+    x = wx.StaticText(parent, -1, string)
+    x.Wrap(wx_text_wrap_width)
+    return x
+
+def box(sizer_of, orientation, *contents):
+    box = wx.BoxSizer(orientation)
+    for c in contents:
+        if   isinstance(c, list):  box.AddMany(c)
+        elif isinstance(c, tuple): box.Add(*c)
+        else:                      box.Add(c)
+    sizer_of.SetSizer(box)
+    return box
+
+class QuestionnaireDialog(wx.Dialog):
+    def __init__(self, parent, title, scale_levels, questions):
+        wx.Dialog.__init__(self, parent, -1, title, wx.DefaultPosition)
+
+        notebook = wx.Notebook(self, style = wx.BK_DEFAULT)
+        self.questions = deepcopy(questions)
+
+        for qn1 in range(0, len(questions), questions_per_page):
+            panel = wx.Panel(notebook)
+
+            fgs = wx.FlexGridSizer(cols = 1 + len(scale_levels),
+                vgap = 5, hgap = 5)
+            # Add horizontal spaces to make all the response
+            # columns the same width.
+            fgs.Add(wx.Size(0, 0))
+            fgs.AddMany(len(scale_levels) * [wx.Size(100, 0)])
+            # Add the column headers.
+            fgs.Add(wx.Size(0, 0))
+            for s in scale_levels:
+                fgs.Add(wrapped_text(panel, s), 0, wx.ALIGN_CENTER)
+            # Add the questions and radio buttons.
+            for q in self.questions[qn1 : qn1 + questions_per_page]:
+                wx.RadioButton(panel, pos = (-50, -50), style = wx.RB_GROUP)
+                  # Create a hidden radio button so that it appears that no
+                  # button is selected by default.
+                q['buttons'] = map(lambda _: wx.RadioButton(panel, -1), scale_levels)
+                fgs.Add(wrapped_text(panel, q['text']), 0, wx.ALIGN_CENTER_VERTICAL)
+                for b in q['buttons']:
+                    fgs.Add(b, 0, wx.ALIGN_CENTER)
+            # Add some trailing vertical space.
+            fgs.Add(wx.Size(0, 5))
+            panel.SetSizer(fgs)
+
+            notebook.AddPage(panel, "Page %d" % (qn1 / questions_per_page + 1,))
+
+        b = box(self, wx.VERTICAL,
+            notebook,
+            (wx.Button(self, wx.ID_OK), 0, wx.ALIGN_CENTER_HORIZONTAL)).Fit(self)
+
+def questionnaire(dkey, prompt, scale_levels, questions):
+    with timestamps(dkey):
+        qd = QuestionnaireDialog(None, '', scale_levels, questions)
+        while True:
+            draw(text(0, .8, prompt, vAlign = 'top'))
+            qd.CenterOnScreen(wx.BOTH)
+            qd.ShowModal()
+            responses = {}
+            for q in qd.questions:
+                vs = [x.GetValue() for x in q['buttons']]
+                if not any(vs): break
+                responses[q['id']] = vs.index(True) + 1
+            else:
+                for k, v in responses.items():
+                    save(tuplecat(dkey, k), v)
+                qd.Destroy()
+                return
+            draw(text(0, .8, prompt, vAlign = 'top'))
+            message_dialog('Please answer all of the questions.')
 
 # ------------------------------------------------------------
 # Get the subject number
@@ -337,6 +428,30 @@ with open(condition_permutations_path, "r") as ps:
 color_cake_picture = condition['color_cake_picture']
 save('cake_condition',
     'color' if color_cake_picture else 'gray')
+
+# ------------------------------------------------------------
+# Administer the Van den Berg, Franken, & Muris (2010) RR
+# scale and the BIS scale
+# ------------------------------------------------------------
+
+questionnaire('rrbis', 'Answer the below questionnaire.',
+   scale_levels = ('Strongly\ndisagree', 'Mildly\ndisagree', 'Mildly\nagree', 'Strongly\nagree'),
+   questions = [
+       {'id': ('RR', 6), 'text': 'When I see an opportunity for something I like, I get excited right away.'},
+       {'id': ('RR', 1), 'text': 'I am someone who goes all-out.'},
+       {'id': ('BIS', 2), 'text': 'Criticism or scolding hurts me quite a bit.'},
+       {'id': ('RR', 2), 'text': 'If I discover something new I like, I usually continue doing it for a while.'},
+       {'id': ('RR', 4), 'text': 'When I am successful at something, I continue doing it.'},
+       {'id': ('BIS', 1), 'text': 'Even if something bad is about to happen to me, I rarely experience fear or nervousness.'},
+       {'id': ('BIS', 7), 'text': 'I worry about making mistakes.'},
+       {'id': ('RR', 5), 'text': 'When I go after something I use a "no holds barred" approach.'},
+       {'id': ('BIS', 3), 'text': 'I feel pretty worried when I think or know somebody is angry at me.'},
+       {'id': ('RR', 8), 'text': 'If I see a chance of something I want, I move on it right away.'},
+       {'id': ('RR', 7), 'text': 'When I\'m doing well at something, I love to keep at it.'},
+       {'id': ('BIS', 5), 'text': 'I feel worried when I think I have done poorly at something.'},
+       {'id': ('RR', 3), 'text': 'I would do anything to achieve my goals.'},
+       {'id': ('BIS', 6), 'text': 'I have very few fears compared to my friends.'},
+       {'id': ('BIS', 4), 'text': 'If I think something unpleasant is going to happen I usually get pretty worked up.'}])
 
 # ------------------------------------------------------------
 # Explain the gamble outcomes
